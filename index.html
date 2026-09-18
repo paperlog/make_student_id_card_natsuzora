@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>学生証ジェネレーター</title>
 
-  <!--  画像保存用ライブラリ --> 
+  <!-- 画像保存用ライブラリ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-  
+
   <style>
     :root {
       --primary-color: #6366f1;
@@ -97,15 +97,14 @@
     /* ----------------------------------
        プレビューエリア & 学生証カード
     ----------------------------------- */
-    /* プレビュー親枠：中身が900pxあっても画面幅に収める指定 */
     .preview-panel {
-    flex-grow: 1;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0; /* これがないと親要素が900pxまで広がってしまいます */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
+      flex-grow: 1;
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
 
     .preview-header {
@@ -165,16 +164,18 @@
       white-space: nowrap;
     }
 
-    /* 2. プロフィール写真 */
+    /* 2. プロフィール写真（比率保持のため背景画像で描画） */
     .profile-photo {
       position: absolute;
       top: 150px;
       left: 60px;
       width: 310px;
       height: 370px;
-      object-fit: cover;
       border-radius: 12px;
-      display: none; /* 画像が選ばれるまで非表示（下絵の枠を見せる） */
+      display: none;
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
     }
 
     /* 3. 各テキストの共通スタイル */
@@ -282,17 +283,17 @@
     <div class="preview-panel">
       <div class="preview-header">
         <span class="preview-title">リアルタイムプレビュー</span>
-	<button id="btn-download" style="padding: 6px 14px; background: #6366f1; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">画像を保存</button>
+        <button id="btn-download" style="padding: 6px 14px; background: #6366f1; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">画像を保存</button>
       </div>
 
       <!-- 学生証カード本体 -->
       <div id="card-wrapper" style="width: 100%; display: flex; justify-content: center; overflow: hidden;">
-	<div class="id-card" id="card">
+        <div class="id-card" id="card">
           <div class="school-name" id="disp-school">夏空学園</div>
           <div class="school-sub" id="disp-sub">STUDENT ID CARD</div>
 
-          <!-- 選択した画像がここに反映される -->
-          <img class="profile-photo" id="disp-photo" alt="証明写真">
+          <!-- 選択した画像がここに反映される（縦長化バグ防止のためdivに変更） -->
+          <div class="profile-photo" id="disp-photo"></div>
 
           <div class="field-value val-name" id="disp-name">user name</div>
           <div class="field-value val-id" id="disp-id">9999番</div>
@@ -300,7 +301,7 @@
           <div class="field-value val-department" id="disp-department">普通科</div>
           <div class="field-value val-grade" id="disp-grade">３年生</div>
           <div class="field-value val-expiry" id="disp-expiry">夏が来なくなるまで</div>
-	</div>
+        </div>
       </div>
     </div>
   </div>
@@ -338,79 +339,76 @@
     function adjustSubPosition() {
       const schoolEl = document.getElementById('disp-school');
       const subEl = document.getElementById('disp-sub');
-      // 学園名の横幅 + 左マージン + 余白
       const schoolRect = schoolEl.offsetWidth;
       subEl.style.left = (170 + schoolRect + 20) + 'px';
     }
     // 初回実行
     adjustSubPosition();
 
-    // 写真のアップロード処理
+    // 写真のアップロード処理（背景画像としてセットし比率崩れを防止）
     const inputPhoto = document.getElementById('input-photo');
     const dispPhoto = document.getElementById('disp-photo');
 
     inputPhoto.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
-        // 端末内の画像をURL化してプレビュー表示
-        dispPhoto.src = URL.createObjectURL(file);
+        dispPhoto.style.backgroundImage = `url("${URL.createObjectURL(file)}")`;
         dispPhoto.style.display = 'block';
       } else {
-        dispPhoto.src = '';
+        dispPhoto.style.backgroundImage = '';
         dispPhoto.style.display = 'none';
       }
     });
 
-      // ==========================================
-      // 1. スマホ・画面幅に合わせた自動縮小処理
-      // ==========================================
-      function resizeCard() {
+    // ==========================================
+    // 1. スマホ・画面幅に合わせた自動縮小処理
+    // ==========================================
+    function resizeCard() {
       const card = document.getElementById('card');
       const wrapper = document.getElementById('card-wrapper');
       if (!card || !wrapper) return;
-      
+
       // 画面の横幅（左右の余白を引いた実質サイズ）を取得
       const screenWidth = window.innerWidth - 30;
       // ラッパーの幅か画面幅の小さい方を基準にする
       const availableWidth = Math.min(wrapper.clientWidth || screenWidth, screenWidth);
-      
+
       // 900pxに対する縮小倍率を計算（最大1倍）
       const scale = Math.min(1, availableWidth / 900);
-      
+
       // 縮小を適用
       card.style.transform = `scale(${scale})`;
       // 縮小した分、下にできる空白を詰める
       wrapper.style.height = `${600 * scale}px`;
-      }
-      
-      // 画面サイズ変更時・読み込み完了時に実行
-      window.addEventListener('resize', resizeCard);
-      window.addEventListener('orientationchange', resizeCard); // スマホの向きを変えた時
-      window.addEventListener('DOMContentLoaded', resizeCard);
-      resizeCard();
-      
-      
-      // ==========================================
-      // 2. 画像保存（ダウンロード）処理
-      // ==========================================
-      document.getElementById('btn-download').addEventListener('click', () => {
+    }
+
+    // 画面サイズ変更時・読み込み完了時に実行
+    window.addEventListener('resize', resizeCard);
+    window.addEventListener('orientationchange', resizeCard);
+    window.addEventListener('DOMContentLoaded', resizeCard);
+    resizeCard();
+
+    // ==========================================
+    // 2. 画像保存（ダウンロード）処理
+    // ==========================================
+    document.getElementById('btn-download').addEventListener('click', () => {
       const card = document.getElementById('card');
-      
-      // 縮小表示のままキャプチャすると画質が落ちるため、一時的に原寸大（scale=1）に戻す
+
+      // 縮小表示のままキャプチャすると画質が落ちるため、一時的に原寸大に戻す
       const currentTransform = card.style.transform;
       card.style.transform = 'none';
-      
+
       html2canvas(card, { scale: 2 }).then(canvas => {
-      // キャプチャが終わったら画面上の縮小表示に戻す
-      card.style.transform = currentTransform;
-      
-      // 画像ダウンロードを実行
-      const link = document.createElement('a');
-      link.download = 'student-card.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
+        // キャプチャが終わったら画面上の縮小表示に戻す
+        card.style.transform = currentTransform;
+
+        // 画像ダウンロードを実行
+        const link = document.createElement('a');
+        link.download = 'student-card.png';
+        link.href = canvas.toDataURL('image/png');
+        link.click();
       });
-      });
+    });
   </script>
 </body>
 </html>
