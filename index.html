@@ -97,12 +97,15 @@
     /* ----------------------------------
        プレビューエリア & 学生証カード
     ----------------------------------- */
+    /* プレビュー親枠：中身が900pxあっても画面幅に収める指定 */
     .preview-panel {
-      flex-grow: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      overflow-x: auto;
+    flex-grow: 1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0; /* これがないと親要素が900pxまで広がってしまいます */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
     }
 
     .preview-header {
@@ -364,18 +367,27 @@
       function resizeCard() {
       const card = document.getElementById('card');
       const wrapper = document.getElementById('card-wrapper');
+      if (!card || !wrapper) return;
       
-      // 画面幅（ラッパーの横幅）に合わせて倍率を計算（最大1倍）
-      const scale = Math.min(1, wrapper.clientWidth / 900);
+      // 画面の横幅（左右の余白を引いた実質サイズ）を取得
+      const screenWidth = window.innerWidth - 30;
+      // ラッパーの幅か画面幅の小さい方を基準にする
+      const availableWidth = Math.min(wrapper.clientWidth || screenWidth, screenWidth);
       
+      // 900pxに対する縮小倍率を計算（最大1倍）
+      const scale = Math.min(1, availableWidth / 900);
+      
+      // 縮小を適用
       card.style.transform = `scale(${scale})`;
-      // 縮小した分、下にできる余計な空白を詰める
+      // 縮小した分、下にできる空白を詰める
       wrapper.style.height = `${600 * scale}px`;
       }
       
+      // 画面サイズ変更時・読み込み完了時に実行
       window.addEventListener('resize', resizeCard);
-      window.addEventListener('load', resizeCard);
-      resizeCard(); // 初回実行
+      window.addEventListener('orientationchange', resizeCard); // スマホの向きを変えた時
+      window.addEventListener('DOMContentLoaded', resizeCard);
+      resizeCard();
       
       
       // ==========================================
