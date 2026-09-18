@@ -164,7 +164,7 @@
       white-space: nowrap;
     }
 
-    /* 2. プロフィール写真（比率保持のため背景画像で描画） */
+    /* 2. プロフィール写真 */
     .profile-photo {
       position: absolute;
       top: 150px;
@@ -173,9 +173,6 @@
       height: 370px;
       border-radius: 12px;
       display: none;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
     }
 
     /* 3. 各テキストの共通スタイル */
@@ -292,8 +289,8 @@
           <div class="school-name" id="disp-school">夏空学園</div>
           <div class="school-sub" id="disp-sub">STUDENT ID CARD</div>
 
-          <!-- 選択した画像がここに反映される（縦長化バグ防止のためdivに変更） -->
-          <div class="profile-photo" id="disp-photo"></div>
+          <!-- 証明写真 -->
+          <img class="profile-photo" id="disp-photo" alt="証明写真">
 
           <div class="field-value val-name" id="disp-name">user name</div>
           <div class="field-value val-id" id="disp-id">9999番</div>
@@ -345,17 +342,50 @@
     // 初回実行
     adjustSubPosition();
 
-    // 写真のアップロード処理（背景画像としてセットし比率崩れを防止）
+    // 写真のアップロード処理（Canvasで比率を維持したまま中央トリミング）
     const inputPhoto = document.getElementById('input-photo');
     const dispPhoto = document.getElementById('disp-photo');
 
     inputPhoto.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
-        dispPhoto.style.backgroundImage = `url("${URL.createObjectURL(file)}")`;
-        dispPhoto.style.display = 'block';
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onload = () => {
+            const targetW = 620;
+            const targetH = 740;
+            const targetRatio = targetW / targetH;
+            const imgRatio = img.width / img.height;
+
+            let sx, sy, sWidth, sHeight;
+
+            if (imgRatio > targetRatio) {
+              sHeight = img.height;
+              sWidth = img.height * targetRatio;
+              sx = (img.width - sWidth) / 2;
+              sy = 0;
+            } else {
+              sWidth = img.width;
+              sHeight = img.width / targetRatio;
+              sx = 0;
+              sy = (img.height - sHeight) / 2;
+            }
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetW;
+            canvas.height = targetH;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
+
+            dispPhoto.src = canvas.toDataURL('image/png');
+            dispPhoto.style.display = 'block';
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
       } else {
-        dispPhoto.style.backgroundImage = '';
+        dispPhoto.src = '';
         dispPhoto.style.display = 'none';
       }
     });
@@ -368,21 +398,14 @@
       const wrapper = document.getElementById('card-wrapper');
       if (!card || !wrapper) return;
 
-      // 画面の横幅（左右の余白を引いた実質サイズ）を取得
       const screenWidth = window.innerWidth - 30;
-      // ラッパーの幅か画面幅の小さい方を基準にする
       const availableWidth = Math.min(wrapper.clientWidth || screenWidth, screenWidth);
-
-      // 900pxに対する縮小倍率を計算（最大1倍）
       const scale = Math.min(1, availableWidth / 900);
 
-      // 縮小を適用
       card.style.transform = `scale(${scale})`;
-      // 縮小した分、下にできる空白を詰める
       wrapper.style.height = `${600 * scale}px`;
     }
 
-    // 画面サイズ変更時・読み込み完了時に実行
     window.addEventListener('resize', resizeCard);
     window.addEventListener('orientationchange', resizeCard);
     window.addEventListener('DOMContentLoaded', resizeCard);
@@ -394,15 +417,12 @@
     document.getElementById('btn-download').addEventListener('click', () => {
       const card = document.getElementById('card');
 
-      // 縮小表示のままキャプチャすると画質が落ちるため、一時的に原寸大に戻す
       const currentTransform = card.style.transform;
       card.style.transform = 'none';
 
       html2canvas(card, { scale: 2 }).then(canvas => {
-        // キャプチャが終わったら画面上の縮小表示に戻す
         card.style.transform = currentTransform;
 
-        // 画像ダウンロードを実行
         const link = document.createElement('a');
         link.download = 'student-card.png';
         link.href = canvas.toDataURL('image/png');
