@@ -4,6 +4,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>学生証ジェネレーター</title>
+
+  <!--  画像保存用ライブラリ --> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
   <style>
     :root {
       --primary-color: #6366f1;
@@ -118,6 +122,7 @@
 
     /* 学生証カード本体（画像を背景に指定） */
     .id-card {
+      transform-origin: top center;
       position: relative;
       width: 900px;
       height: 600px;
@@ -274,22 +279,25 @@
     <div class="preview-panel">
       <div class="preview-header">
         <span class="preview-title">リアルタイムプレビュー</span>
+	<button id="btn-download" style="padding: 6px 14px; background: #6366f1; color: #fff; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">画像を保存</button>
       </div>
 
       <!-- 学生証カード本体 -->
-      <div class="id-card" id="card">
-        <div class="school-name" id="disp-school">夏空学園</div>
-        <div class="school-sub" id="disp-sub">STUDENT ID CARD</div>
+      <div id="card-wrapper" style="width: 100%; display: flex; justify-content: center; overflow: hidden;">
+	<div class="id-card" id="card">
+          <div class="school-name" id="disp-school">夏空学園</div>
+          <div class="school-sub" id="disp-sub">STUDENT ID CARD</div>
 
-        <!-- 選択した画像がここに反映される -->
-        <img class="profile-photo" id="disp-photo" alt="証明写真">
+          <!-- 選択した画像がここに反映される -->
+          <img class="profile-photo" id="disp-photo" alt="証明写真">
 
-        <div class="field-value val-name" id="disp-name">user name</div>
-        <div class="field-value val-id" id="disp-id">9999番</div>
-        <div class="field-value val-birthday" id="disp-birthday">20xx年 xx月 xx日</div>
-        <div class="field-value val-department" id="disp-department">普通科</div>
-        <div class="field-value val-grade" id="disp-grade">３年生</div>
-        <div class="field-value val-expiry" id="disp-expiry">夏が来なくなるまで</div>
+          <div class="field-value val-name" id="disp-name">user name</div>
+          <div class="field-value val-id" id="disp-id">9999番</div>
+          <div class="field-value val-birthday" id="disp-birthday">20xx年 xx月 xx日</div>
+          <div class="field-value val-department" id="disp-department">普通科</div>
+          <div class="field-value val-grade" id="disp-grade">３年生</div>
+          <div class="field-value val-expiry" id="disp-expiry">夏が来なくなるまで</div>
+	</div>
       </div>
     </div>
   </div>
@@ -349,6 +357,48 @@
         dispPhoto.style.display = 'none';
       }
     });
+
+      // ==========================================
+      // 1. スマホ・画面幅に合わせた自動縮小処理
+      // ==========================================
+      function resizeCard() {
+      const card = document.getElementById('card');
+      const wrapper = document.getElementById('card-wrapper');
+      
+      // 画面幅（ラッパーの横幅）に合わせて倍率を計算（最大1倍）
+      const scale = Math.min(1, wrapper.clientWidth / 900);
+      
+      card.style.transform = `scale(${scale})`;
+      // 縮小した分、下にできる余計な空白を詰める
+      wrapper.style.height = `${600 * scale}px`;
+      }
+      
+      window.addEventListener('resize', resizeCard);
+      window.addEventListener('load', resizeCard);
+      resizeCard(); // 初回実行
+      
+      
+      // ==========================================
+      // 2. 画像保存（ダウンロード）処理
+      // ==========================================
+      document.getElementById('btn-download').addEventListener('click', () => {
+      const card = document.getElementById('card');
+      
+      // 縮小表示のままキャプチャすると画質が落ちるため、一時的に原寸大（scale=1）に戻す
+      const currentTransform = card.style.transform;
+      card.style.transform = 'none';
+      
+      html2canvas(card, { scale: 2 }).then(canvas => {
+      // キャプチャが終わったら画面上の縮小表示に戻す
+      card.style.transform = currentTransform;
+      
+      // 画像ダウンロードを実行
+      const link = document.createElement('a');
+      link.download = 'student-card.png';
+      link.href = canvas.toDataURL('image/png');
+      link.click();
+      });
+      });
   </script>
 </body>
 </html>
